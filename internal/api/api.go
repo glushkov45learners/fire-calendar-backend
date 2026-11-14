@@ -36,6 +36,7 @@ func New(s *store.Store, log *slog.Logger, corsOrigins []string) http.Handler {
 	mux.HandleFunc("POST /api/v1/analyze", srv.analyze)
 	mux.HandleFunc("POST /api/v1/hotspots.csv", srv.hotspotsCSV)
 	mux.HandleFunc("POST /api/v1/calendar.csv", srv.calendarCSV)
+	mux.HandleFunc("GET /api/v1/grid", srv.grid)
 	mux.Handle("GET /api/birthday/", birthdayHandler())
 	mux.Handle("GET /api/birthday", http.RedirectHandler("/api/birthday/", http.StatusMovedPermanently))
 	return withCORS(corsOrigins, mux)
@@ -298,6 +299,44 @@ func (s *Server) calendarCSV(w http.ResponseWriter, r *http.Request) {
 			strconv.Itoa(m.ViirsRaw), fmtFloat(m.Median), optFloat(m.Z), pct, m.Anomaly})
 	}
 	cw.Flush()
+}
+
+// grid serves the map layer: totals per 0.1° cell over from..to for one
+// record (harmonized, modis or viirs), for the whole coverage.
+func (s *Server) grid(w http.ResponseWriter, r *http.Request) {
+	p := r.URL.Query()
+	record := p.Get("record")
+	if record == "" {
+		record = "harmonized"
+	}
+	if !store.ValidGridRecord(record) {
+		s.fail(w, r, badRequest("invalid_request", "record must be harmonized, modis or viirs"))
+		return
+	}
+	from, errF := time.Parse(time.DateOnly, p.Get("from"))
+	to, errT := time.Parse(time.DateOnly, p.Get("to"))
+	if errF != nil || errT != nil {
+		s.fail(w, r, badRequest("invalid_range", "from and to must be YYYY-MM-DD"))
+		return
+	}
+	if from.After(to) {
+		s.fail(w, r, badRequest("invalid_range", "from is after to"))
+		return
+	}
+	cells, err := s.store.GridSums(r.Context(), record, from, to)
+	if err != nil {
+		s.fail(w, r, err)
+		return
+	}
+	if cells == nil {
+		cells = []store.GridCell{} // [] rather than null
+	}
+	for i := range cells {
+		cells[i].Count = float64(int64(cells[i].Count*100+0.5)) / 100
+	}
+	// The archive changes once a day at most; let the browser reuse the layer.
+	w.Header().Set("Cache-Control", "public, max-age=300")
+	writeJSON(w, http.StatusOK, cells)
 }
 
 func fmtFloat(f float64) string { return strconv.FormatFloat(f, 'f', -1, 64) }

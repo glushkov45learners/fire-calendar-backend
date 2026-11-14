@@ -139,6 +139,41 @@ func (s *Store) DailySums(ctx context.Context, cells []int32) ([]analysis.Day, e
 	})
 }
 
+// GridCell is the total of one record in one 0.1° cell over a period (GET /grid).
+type GridCell struct {
+	CellID int32   `json:"cell_id"`
+	Count  float64 `json:"count"`
+}
+
+// gridColumns maps the record names of GET /grid to cell_day columns.
+var gridColumns = map[string]string{
+	"harmonized": "count_h",
+	"modis":      "modis_count",
+	"viirs":      "viirs_count",
+}
+
+// ValidGridRecord reports whether record is one GridSums accepts.
+func ValidGridRecord(record string) bool { _, ok := gridColumns[record]; return ok }
+
+// GridSums returns per-cell totals of the record over from..to (inclusive)
+// for the whole coverage. Cells with nothing in the period are left out.
+func (s *Store) GridSums(ctx context.Context, record string, from, to time.Time) ([]GridCell, error) {
+	col, ok := gridColumns[record]
+	if !ok {
+		return nil, fmt.Errorf("unknown grid record %q", record)
+	}
+	// col comes from the fixed map above, never from the request.
+	rows, err := s.pool.Query(ctx, `
+		SELECT cell_id, sum(`+col+`)::float8 AS n
+		FROM cell_day WHERE date BETWEEN $1 AND $2
+		GROUP BY cell_id HAVING sum(`+col+`) > 0
+		ORDER BY cell_id`, from, to)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[GridCell])
+}
+
 // Hotspot is one raw FIRMS point (contract 3, hotspots.csv).
 type Hotspot struct {
 	Lat, Lon   float64

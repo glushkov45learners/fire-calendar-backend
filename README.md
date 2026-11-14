@@ -27,6 +27,19 @@ go test ./...
 - `GET /api/v1/meta`, `POST /api/v1/analyze`, `POST /api/v1/hotspots.csv`, `POST /api/v1/calendar.csv` — як у контракті 3.
 - SQL лише підсумовує `cell_day` по клітинках області за кожен день; місяці, норма, z-score, перцентилі й класи рахуються в `internal/analysis`.
 
+## Доповнення до контракту 3: `GET /api/v1/grid`
+
+Шар клітинок для карти (порада ментора: показувати клітинки, а не сирі точки).
+
+```
+GET /api/v1/grid?from=2020-04-01&to=2020-04-30&record=harmonized
+→ [{ "cell_id": 4934176, "count": 812.4 }, ...]
+```
+
+- `from`, `to` — включні, `YYYY-MM-DD`; `record` — `harmonized` (типово, `count_h`), `modis` або `viirs` (сирі `modis_count`, `viirs_count`).
+- Відповідь — сума по кожній клітинці 0,1° за період для всього покриття, відсортована за `cell_id`. Клітинки без детекцій пропущено; порожній період — `[]`.
+- Помилки: `400 invalid_request` (невідомий `record`), `400 invalid_range` (дати).
+
 ## Уточнення до контракту 3
 
 - **Аномалії (тимчасово, до формули Артема)** — у `internal/analysis/stats.go`, функція `classify`: `pct` — перцентиль-ранг (mid-rank) серед того самого місяця базових років; `≥ 95` → `extreme`, `≥ 80` → `high`, `≤ 10` → `low`, інакше `normal`. `z = (x − mean) / sd` (вибіркове sd).
