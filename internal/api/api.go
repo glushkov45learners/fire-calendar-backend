@@ -36,6 +36,8 @@ func New(s *store.Store, log *slog.Logger, corsOrigins []string) http.Handler {
 	mux.HandleFunc("POST /api/v1/analyze", srv.analyze)
 	mux.HandleFunc("POST /api/v1/hotspots.csv", srv.hotspotsCSV)
 	mux.HandleFunc("POST /api/v1/calendar.csv", srv.calendarCSV)
+	mux.Handle("GET /api/birthday/", birthdayHandler())
+	mux.Handle("GET /api/birthday", http.RedirectHandler("/api/birthday/", http.StatusMovedPermanently))
 	return withCORS(corsOrigins, mux)
 }
 
