@@ -18,7 +18,8 @@ DATABASE_URL=postgres://fire:fire@localhost:5432/fire?sslmode=disable go run ./c
 go test ./...
 ```
 
-Змінні: `DATABASE_URL` (обов'язкова), `ADDR` (типово `:8080`). `GET /healthz` — перевірка БД.
+Змінні: `DATABASE_URL` (обов'язкова), `ADDR` (типово `:8080`).
+`CORS_ORIGINS` — дозволені origin через кому або `*`; порожня — CORS вимкнено (у проді фронт і API на одному origin). `GET /healthz` — перевірка БД.
 
 ## Що робить бекенд
 

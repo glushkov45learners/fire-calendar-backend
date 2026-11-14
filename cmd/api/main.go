@@ -4,6 +4,7 @@
 //
 //	DATABASE_URL  PostgreSQL connection string (required)
 //	ADDR          listen address, default :8080
+//	CORS_ORIGINS  comma-separated allowed origins, or *; empty = same-origin only
 package main
 
 import (
@@ -13,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -37,6 +39,12 @@ func run(log *slog.Logger) error {
 	if addr == "" {
 		addr = ":8080"
 	}
+	var corsOrigins []string
+	for _, o := range strings.Split(os.Getenv("CORS_ORIGINS"), ",") {
+		if o = strings.TrimRight(strings.TrimSpace(o), "/"); o != "" {
+			corsOrigins = append(corsOrigins, o)
+		}
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -49,7 +57,7 @@ func run(log *slog.Logger) error {
 
 	srv := &http.Server{
 		Addr:              addr,
-		Handler:           api.New(st, log),
+		Handler:           api.New(st, log, corsOrigins),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	errc := make(chan error, 1)

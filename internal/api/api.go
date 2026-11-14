@@ -27,7 +27,8 @@ type Server struct {
 	log   *slog.Logger
 }
 
-func New(s *store.Store, log *slog.Logger) http.Handler {
+// New returns the API handler; corsOrigins may be empty (same-origin only).
+func New(s *store.Store, log *slog.Logger, corsOrigins []string) http.Handler {
 	srv := &Server{store: s, log: log}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", srv.health)
@@ -35,7 +36,7 @@ func New(s *store.Store, log *slog.Logger) http.Handler {
 	mux.HandleFunc("POST /api/v1/analyze", srv.analyze)
 	mux.HandleFunc("POST /api/v1/hotspots.csv", srv.hotspotsCSV)
 	mux.HandleFunc("POST /api/v1/calendar.csv", srv.calendarCSV)
-	return mux
+	return withCORS(corsOrigins, mux)
 }
 
 // apiError is the contract 3 error body.
