@@ -1,0 +1,20 @@
+# Local development only; the deployed stack lives in the fire-calendar hub repo.
+services:
+  postgis:
+    image: postgis/postgis:17-3.5
+    environment:
+      POSTGRES_USER: fire
+      POSTGRES_PASSWORD: fire
+      POSTGRES_DB: fire
+    ports: ["5432:5432"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "fire"]
+      interval: 2s
+      retries: 30
+  api:
+    build: .
+    environment:
+      DATABASE_URL: postgres://fire:fire@postgis:5432/fire?sslmode=disable
+    ports: ["8080:8080"]
+    depends_on:
+      postgis: { condition: service_healthy }
