@@ -14,8 +14,11 @@ CREATE TABLE IF NOT EXISTS hotspot (
     daynight   char(1),            -- D | N
     type       smallint,           -- NULL for NRT
     product    text NOT NULL,      -- SP | NRT
-    cell_id    int NOT NULL
+    cell_id    int NOT NULL,
+    lc         smallint            -- IGBP class 1–17 (MCD12Q1 LC_Type1), NULL if unknown
 );
+-- Tables created before lc was added.
+ALTER TABLE hotspot ADD COLUMN IF NOT EXISTS lc smallint;
 CREATE INDEX IF NOT EXISTS hotspot_geom_idx ON hotspot USING gist (geom);
 CREATE INDEX IF NOT EXISTS hotspot_acq_date_idx ON hotspot (acq_date);
 CREATE INDEX IF NOT EXISTS hotspot_cell_date_idx ON hotspot (cell_id, acq_date);
