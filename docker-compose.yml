@@ -16,6 +16,10 @@ services:
     environment:
       DATABASE_URL: postgres://fire:fire@postgis:5432/fire?sslmode=disable
       CORS_ORIGINS: "*"
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      MAIL_FROM: ${MAIL_FROM:-digest@glushkov45learners.company}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      DIGEST_KEY: ${DIGEST_KEY:-demo}
     ports: ["8080:8080"]
     depends_on:
       postgis: { condition: service_healthy }
