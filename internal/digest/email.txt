@@ -1,0 +1,18 @@
+FIRE CALENDAR — {{.MonthName}} {{.Year}} in Ukraine
+
+{{.Count}} harmonized fire detections
+{{.Versus}} (norm: {{.Median}})
+
+Anomaly: {{.AnomalyLabel}}{{if .Pct}}, percentile {{.Pct}}{{end}}
+Rank: {{.Ordinal}} most active {{.MonthName}} of {{.Years}} on record
+{{if .PeakDate}}Peak day: {{.PeakDate}}, {{.PeakCount}} detections
+{{end}}Raw detections: MODIS {{.Modis}}, VIIRS S-NPP {{.Viirs}}
+
+Last 12 months:
+{{range .Bars}}  {{.Label}}  {{.Count}}{{if .Current}}  <-{{end}}
+{{end}}
+Open the calendar: {{.Site}}
+
+MODIS and VIIRS hot spots from NASA FIRMS, harmonized to one record.
+You get this once a month because you subscribed at {{.Site}}
+Unsubscribe: {{.Unsubscribe}}

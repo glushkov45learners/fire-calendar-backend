@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/glushkov45learners/fire-calendar-backend/internal/analysis"
+	"github.com/glushkov45learners/fire-calendar-backend/internal/digest"
 	"github.com/glushkov45learners/fire-calendar-backend/internal/store"
 )
 
@@ -23,14 +24,30 @@ const (
 )
 
 type Server struct {
-	store *store.Store
-	log   *slog.Logger
+	store     *store.Store
+	log       *slog.Logger
+	digest    *digest.Service
+	digestKey string
 }
 
-// New returns the API handler; corsOrigins may be empty (same-origin only).
-func New(s *store.Store, log *slog.Logger, corsOrigins []string) http.Handler {
-	srv := &Server{store: s, log: log}
+// Config is the optional part of the API.
+type Config struct {
+	CORSOrigins []string        // empty = same-origin only
+	Digest      *digest.Service // monthly e-mail; nil = no demo pages
+	DigestKey   string          // key of the /api/digest pages; empty = pages are off
+}
+
+// New returns the API handler.
+func New(s *store.Store, log *slog.Logger, cfg Config) http.Handler {
+	srv := &Server{store: s, log: log, digest: cfg.Digest, digestKey: cfg.DigestKey}
 	mux := http.NewServeMux()
+	mux.HandleFunc("POST /api/v1/subscriptions", srv.subscribe)
+	mux.HandleFunc("GET /api/v1/unsubscribe", srv.unsubscribe)
+	mux.HandleFunc("POST /api/v1/unsubscribe", srv.unsubscribe)
+	// Outside /api/v1: demo pages, not part of contract 3.
+	mux.HandleFunc("GET /api/digest", srv.digestGuard(srv.digestPage))
+	mux.HandleFunc("GET /api/digest/preview", srv.digestGuard(srv.digestPreview))
+	mux.HandleFunc("POST /api/digest/send", srv.digestGuard(srv.digestSend))
 	mux.HandleFunc("GET /healthz", srv.health)
 	mux.HandleFunc("GET /api/v1/meta", srv.meta)
 	mux.HandleFunc("POST /api/v1/analyze", srv.analyze)
@@ -39,7 +56,7 @@ func New(s *store.Store, log *slog.Logger, corsOrigins []string) http.Handler {
 	mux.HandleFunc("GET /api/v1/grid", srv.grid)
 	mux.Handle("GET /api/birthday/", birthdayHandler())
 	mux.Handle("GET /api/birthday", http.RedirectHandler("/api/birthday/", http.StatusMovedPermanently))
-	return withCORS(corsOrigins, mux)
+	return withCORS(cfg.CORSOrigins, mux)
 }
 
 // apiError is the contract 3 error body.

@@ -11,7 +11,7 @@ import (
 
 // Bad parameters are rejected before the database is touched, so no store is needed.
 func TestGridRejectsBadParameters(t *testing.T) {
-	h := New(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	h := New(nil, slog.New(slog.NewTextHandler(io.Discard, nil)), Config{})
 	for query, code := range map[string]string{
 		"from=2020-01-01&to=2020-02-01&record=frp": "invalid_request",
 		"from=2020-01-01&record=modis":             "invalid_range",

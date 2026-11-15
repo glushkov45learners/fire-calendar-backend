@@ -8,7 +8,7 @@ import (
 )
 
 func TestBirthday(t *testing.T) {
-	h := New(nil, nil, nil)
+	h := New(nil, nil, Config{})
 	for path, want := range map[string]string{"/api/birthday/": "text/html", "/api/birthday/andriyko.jpg": "image/jpeg"} {
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, httptest.NewRequest(http.MethodGet, path, nil))

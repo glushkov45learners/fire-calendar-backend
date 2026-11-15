@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fire Calendar: monthly digest</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #000; color: #f0f0fa;
+         font-family: "D-DIN", "Barlow Semi Condensed", Arial, Verdana, sans-serif; }
+  .wrap { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 640px); gap: 56px;
+          justify-content: center; align-items: start; padding: 56px 32px; }
+  @media (max-width: 860px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 40px; padding: 32px 20px; } }
+  .brand { font-size: 13px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+           padding-bottom: 24px; border-bottom: 1px solid rgb(240 240 250 / 0.14); }
+  .eyebrow { margin: 32px 0 6px; font-size: 13px; letter-spacing: 0.09em; text-transform: uppercase; color: #c0c0c8; }
+  h1 { margin: 0; font-size: 44px; line-height: 1.05; text-transform: uppercase; letter-spacing: -0.5px; }
+  dl { margin: 32px 0; border-top: 1px solid rgb(240 240 250 / 0.3); }
+  dl div { display: flex; justify-content: space-between; gap: 16px; padding: 12px 0;
+           border-bottom: 1px solid rgb(240 240 250 / 0.14); }
+  dt { font-size: 12px; letter-spacing: 0.09em; text-transform: uppercase; color: #78787d; }
+  dd { margin: 0; font-family: "Roboto Mono", ui-monospace, Consolas, monospace; font-size: 14px; text-align: right; }
+  button { width: 100%; padding: 18px 28px; background: #f0f0fa; color: #000; cursor: pointer;
+           border: 1px solid #f0f0fa; border-radius: 4px; font: inherit; font-size: 13px; font-weight: 700;
+           letter-spacing: 0.09em; text-transform: uppercase; }
+  button:hover:not(:disabled) { background: #fff; }
+  button:focus-visible { outline: 2px solid #f0f0fa; outline-offset: 3px; }
+  button:disabled { background: none; color: #78787d; border-color: rgb(240 240 250 / 0.14); cursor: default; }
+  .note { margin: 16px 0 0; min-height: 44px; font-size: 15px; line-height: 1.45; color: #c0c0c8; }
+  .note.ok { color: #f0f0fa; }
+  .note.bad { color: #ffb4a8; }
+  h2 { margin: 0 0 16px; font-size: 13px; letter-spacing: 0.09em; text-transform: uppercase; }
+  iframe { display: block; width: 100%; height: 1180px; border: 1px solid rgb(240 240 250 / 0.14);
+           border-radius: 4px; background: #000; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <section>
+    <div class="brand">Fire Calendar</div>
+    <p class="eyebrow">Monthly digest</p>
+    <h1>{{if .Digest}}{{.Digest.MonthName}} {{.Digest.Year}}{{else}}Not ready{{end}}</h1>
+    <dl>
+      <div><dt>Area</dt><dd>Ukraine</dd></div>
+      {{if .Digest}}<div><dt>Detections</dt><dd>{{.Digest.Count}}</dd></div>
+      <div><dt>Anomaly</dt><dd>{{.Digest.AnomalyLabel}}</dd></div>{{end}}
+      <div><dt>Subscribers</dt><dd>{{.Subscribers}}</dd></div>
+      <div><dt>Sending</dt><dd>{{if .MailOn}}SendGrid{{else}}Off{{end}}</dd></div>
+    </dl>
+    <button id="send" type="button" {{if or (not .Digest) (not .MailOn)}}disabled{{end}}>Start mailing</button>
+    <p class="note{{if or .Problem (not .MailOn)}} bad{{end}}" id="note" role="status">
+      {{- if .Problem}}{{.Problem}}
+      {{- else if not .MailOn}}Sending is off: SENDGRID_API_KEY is not set on the server.
+      {{- else}}Every subscriber gets the letter on the right, now. The same letter goes out by itself on the first days of each month.{{end -}}
+    </p>
+  </section>
+  <section>
+    <h2>The letter</h2>
+    {{if .Digest}}<iframe title="Preview of the letter" src="/api/digest/preview?key={{.Key}}"></iframe>{{end}}
+  </section>
+</div>
+<script>
+  const key = {{.Key}};
+  const btn = document.getElementById('send');
+  const note = document.getElementById('note');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = 'Mailing…';
+    note.className = 'note';
+    note.textContent = 'Sending the letters.';
+    try {
+      const res = await fetch('/api/digest/send?key=' + encodeURIComponent(key), { method: 'POST' });
+      const body = await res.json();
+      if (!res.ok) throw new Error(body.error ? body.error.message : res.statusText);
+      const letters = body.sent === 1 ? '1 letter' : body.sent + ' letters';
+      note.className = body.failed ? 'note bad' : 'note ok';
+      note.textContent = body.sent + body.failed === 0
+        ? 'Nobody is subscribed yet, so nothing was sent.'
+        : 'Sent ' + letters + ' for ' + body.period + (body.failed ? '; ' + body.failed + ' failed.' : '.');
+    } catch (err) {
+      note.className = 'note bad';
+      note.textContent = 'Mailing failed: ' + err.message;
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Start mailing';
+    }
+  });
+</script>
+</body>
+</html>

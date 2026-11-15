@@ -48,6 +48,22 @@ CREATE TABLE IF NOT EXISTS model_meta (
     body          jsonb NOT NULL
 );
 
+-- Monthly digest (not part of contract 2): who asked for it, and which months
+-- the scheduler has already mailed.
+CREATE TABLE IF NOT EXISTS subscriber (
+    email           text PRIMARY KEY,           -- lower-cased
+    token           text NOT NULL UNIQUE,       -- secret of the unsubscribe link
+    consent_at      timestamptz NOT NULL DEFAULT now(),
+    unsubscribed_at timestamptz
+);
+
+CREATE TABLE IF NOT EXISTS digest_run (
+    period     text PRIMARY KEY,                -- YYYY-MM
+    started_at timestamptz NOT NULL DEFAULT now(),
+    sent       int,
+    failed     int
+);
+
 -- 0.1° grid over the coverage bbox 22.0,44.0,40.3,52.4 (contract 1 formula:
 -- cx = floor((lon + 180) * 10), cy = floor((lat + 90) * 10), id = cy * 3600 + cx).
 -- The bbox reported by /meta is the extent of this table.

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fire Calendar: unsubscribe</title>
+<style>
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #000; color: #f0f0fa;
+         font-family: "D-DIN", "Barlow Semi Condensed", Arial, Verdana, sans-serif; }
+  main { width: min(440px, 100% - 48px); }
+  .brand { font-size: 13px; font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase;
+           padding-bottom: 24px; border-bottom: 1px solid rgb(240 240 250 / 0.14); }
+  h1 { margin: 32px 0 12px; font-size: 32px; line-height: 1.1; text-transform: uppercase; letter-spacing: 0.02em; }
+  p { margin: 0 0 28px; font-size: 16px; line-height: 1.5; color: #c0c0c8; }
+  button, a.btn { display: inline-block; padding: 14px 28px; background: none; color: #f0f0fa; cursor: pointer;
+           border: 1px solid rgb(240 240 250 / 0.35); border-radius: 4px; font: inherit; font-size: 13px;
+           font-weight: 700; letter-spacing: 0.09em; text-transform: uppercase; text-decoration: none; }
+  button:hover, a.btn:hover { background: rgb(240 240 250 / 0.1); }
+  button:focus-visible, a.btn:focus-visible { outline: 2px solid #f0f0fa; outline-offset: 3px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">Fire Calendar</div>
+  {{if eq .State "confirm"}}
+    <h1>Stop the monthly digest?</h1>
+    <p>You will no longer get the monthly letter about fires in Ukraine.</p>
+    <form method="post" action="?token={{.Token}}"><button type="submit">Unsubscribe</button></form>
+  {{else if eq .State "done"}}
+    <h1>You are unsubscribed</h1>
+    <p>No more letters from Fire Calendar. You can subscribe again on the site at any time.</p>
+    <a class="btn" href="/">Open the calendar</a>
+  {{else if eq .State "error"}}
+    <h1>That did not work</h1>
+    <p>We could not unsubscribe you just now. Open the link from the letter again in a minute.</p>
+  {{else}}
+    <h1>Link not recognised</h1>
+    <p>This unsubscribe link is incomplete or out of date. Use the link at the bottom of the latest letter.</p>
+  {{end}}
+</main>
+</body>
+</html>

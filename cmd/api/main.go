@@ -5,9 +5,18 @@
 //	DATABASE_URL  PostgreSQL connection string (required)
 //	ADDR          listen address, default :8080
 //	CORS_ORIGINS  comma-separated allowed origins, or *; empty = same-origin only
+//
+// Monthly digest e-mail (all optional; without a key nothing is mailed):
+//
+//	SENDGRID_API_KEY  SendGrid API key with the Mail Send permission
+//	MAIL_FROM         sender address verified in SendGrid (required with the key)
+//	PUBLIC_URL        site origin used in the letter's links,
+//	                  default https://glushkov45learners.company
+//	DIGEST_KEY        key of the demo page /api/digest?key=...; empty = page is off
 package main
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"log/slog"
@@ -19,6 +28,8 @@ import (
 	"time"
 
 	"github.com/glushkov45learners/fire-calendar-backend/internal/api"
+	"github.com/glushkov45learners/fire-calendar-backend/internal/digest"
+	"github.com/glushkov45learners/fire-calendar-backend/internal/mail"
 	"github.com/glushkov45learners/fire-calendar-backend/internal/store"
 )
 
@@ -55,9 +66,29 @@ func run(log *slog.Logger) error {
 	}
 	defer st.Close()
 
+	dg := &digest.Service{
+		Store:     st,
+		PublicURL: strings.TrimRight(cmp.Or(os.Getenv("PUBLIC_URL"), "https://glushkov45learners.company"), "/"),
+		Log:       log,
+	}
+	if key := os.Getenv("SENDGRID_API_KEY"); key != "" {
+		from := os.Getenv("MAIL_FROM")
+		if from == "" {
+			return errors.New("MAIL_FROM is required when SENDGRID_API_KEY is set")
+		}
+		dg.Mailer = &mail.SendGrid{APIKey: key, From: from, FromName: "Fire Calendar"}
+		go dg.Run(ctx)
+	} else {
+		log.Info("SENDGRID_API_KEY is not set: the monthly digest is not mailed")
+	}
+
 	srv := &http.Server{
-		Addr:              addr,
-		Handler:           api.New(st, log, corsOrigins),
+		Addr: addr,
+		Handler: api.New(st, log, api.Config{
+			CORSOrigins: corsOrigins,
+			Digest:      dg,
+			DigestKey:   os.Getenv("DIGEST_KEY"),
+		}),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	errc := make(chan error, 1)
